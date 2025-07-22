@@ -28,7 +28,7 @@ df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"]
 # -------------------------------
 st.markdown("""
 <div style='display: flex; align-items: center; gap: 15px; padding-top: 10px;'>
-    <img src='https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Owl_in_the_Moonlight.jpg/640px-Owl_in_the_Moonlight.jpg'
+    <img src='https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Owl_and_Key_logo.png/640px-Owl_and_Key_logo.png'
          width='60' style='border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.2);'/>
     <h1 style='margin: 0; font-size: 2.2em;'>Dashboard Fondos Mutuos</h1>
 </div>
