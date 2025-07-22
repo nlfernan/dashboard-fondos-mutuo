@@ -4,10 +4,10 @@ import pandas as pd
 import os
 
 # -------------------------------
-# Cargar datos optimizado desde Parquet
+# Cargar datos optimizado desde Parquet (misma carpeta)
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(BASE_DIR, "..", "Output", "ffmm_merged.parquet")
+file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")
 
 columnas_necesarias = [
     "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
