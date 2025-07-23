@@ -155,7 +155,7 @@ with tab2:
 # -------------------------------
 st.markdown("### Descargar datos filtrados")
 st.download_button(
-    label="👅 Descargar CSV",
+    label="📥 Descargar CSV",
     data=df_filtrado.to_csv(index=False).encode("utf-8-sig"),
     file_name="ffmm_filtrado.csv",
     mime="text/csv"
