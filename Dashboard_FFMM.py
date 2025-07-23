@@ -4,22 +4,33 @@ import pandas as pd
 import os
 
 # -------------------------------
-# Cargar datos optimizado desde Parquet (misma carpeta)
+# Ruta y validación del archivo
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")
 
-columnas_necesarias = [
-    "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
-    "PATRIMONIO_NETO_MM", "VENTA_NETA_MM"
-]
+if not os.path.exists(file_path):
+    st.error("❌ No se encontró el archivo 'ffmm_merged.parquet'. Verificá que esté subido al repositorio.")
+    st.stop()
 
-df = pd.read_parquet(
-    file_path,
-    columns=columnas_necesarias,
-    engine="pyarrow"
-)
+try:
+    columnas_necesarias = [
+        "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
+        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM"
+    ]
 
+    df = pd.read_parquet(
+        file_path,
+        columns=columnas_necesarias,
+        engine="pyarrow"
+    )
+except Exception as e:
+    st.error(f"❌ Error al leer el archivo Parquet: {e}")
+    st.stop()
+
+# -------------------------------
+# Preprocesamiento
+# -------------------------------
 df["FECHA_INF_DATE"] = pd.to_datetime(df["FECHA_INF"], format="%Y%m%d", errors="coerce")
 df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"].astype(str)
 
@@ -35,7 +46,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# Función multiselect con opción "Seleccionar todo"
+# Multiselect con "Seleccionar todo"
 # -------------------------------
 def multiselect_con_todo(label, opciones):
     opciones_mostradas = ["(Seleccionar todo)"] + list(opciones)
@@ -83,7 +94,7 @@ else:
     st.warning("No hay fechas disponibles para este filtro.")
 
 # -------------------------------
-# Validar que haya datos después de todos los filtros
+# Validar que haya datos
 # -------------------------------
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
@@ -94,7 +105,6 @@ if df_filtrado.empty:
 # -------------------------------
 tab1, tab2 = st.tabs(["Patrimonio Neto Total (MM CLP)", "Venta Neta Total (MM CLP)"])
 
-# --- Tab 1: PATRIMONIO_NETO_MM total por día ---
 with tab1:
     st.subheader("Evolución del Patrimonio Neto Total (en millones de CLP)")
     patrimonio_total = (
@@ -104,7 +114,6 @@ with tab1:
     )
     st.bar_chart(patrimonio_total, height=300, use_container_width=True)
 
-# --- Tab 2: VENTA_NETA_MM por día ---
 with tab2:
     st.subheader("Evolución de la Venta Neta Total (en millones de CLP)")
     venta_neta_por_dia = (
@@ -115,7 +124,7 @@ with tab2:
     st.bar_chart(venta_neta_por_dia, height=300, use_container_width=True)
 
 # -------------------------------
-# Botón para descargar CSV (abajo de los gráficos)
+# Descargar CSV
 # -------------------------------
 st.markdown("### Descargar datos filtrados")
 st.download_button(
