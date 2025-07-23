@@ -20,7 +20,7 @@ if not os.path.exists(file_path):
 def cargar_datos_parquet(path):
     columnas_necesarias = [
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
-        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM"
+        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"  # 👈 agregado
     ]
     return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
@@ -59,11 +59,18 @@ def multiselect_con_todo(label, opciones):
         return seleccion
 
 # -------------------------------
-# Filtros
+# Filtro de Tipo de Fondo 👈 agregado
 # -------------------------------
-adm_opciones = sorted(df["NOM_ADM"].dropna().unique())
+tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
+tipo_seleccionados = multiselect_con_todo("Tipo de Fondo", tipo_opciones)
+df_filtrado = df[df["TIPO_FM"].isin(tipo_seleccionados)]
+
+# -------------------------------
+# Filtros existentes
+# -------------------------------
+adm_opciones = sorted(df_filtrado["NOM_ADM"].dropna().unique())
 adm_seleccionadas = multiselect_con_todo("Administradora(s)", adm_opciones)
-df_filtrado = df[df["NOM_ADM"].isin(adm_seleccionadas)]
+df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm_seleccionadas)]
 
 run_nombre_opciones = sorted(df_filtrado["RUN_FM_NOMBRECORTO"].dropna().unique())
 run_nombre_seleccionados = multiselect_con_todo("Fondo(s)", run_nombre_opciones)
