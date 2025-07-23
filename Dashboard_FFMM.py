@@ -151,12 +151,18 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 # -------------------------------
-# Descargar CSV
+# Descargar CSV optimizado con cache
 # -------------------------------
+@st.cache_data
+def generar_csv(df_filtrado):
+    return df_filtrado.to_csv(index=False).encode("utf-8-sig")
+
+csv_data = generar_csv(df_filtrado)
+
 st.markdown("### Descargar datos filtrados")
 st.download_button(
-    label="📥 Descargar CSV",
-    data=df_filtrado.to_csv(index=False).encode("utf-8-sig"),
+    label="⬇️ Descargar CSV",
+    data=csv_data,
     file_name="ffmm_filtrado.csv",
     mime="text/csv"
 )
@@ -185,7 +191,7 @@ footer = """
 
 <div class="footer">
     Autor: Nicolás Fernández Ponce, CFA | Este dashboard muestra la evolución del patrimonio y las ventas netas de fondos mutuos en Chile.  
-    Datos provistos por la <a href="https://www.cmfchile.cl" target="_blank">CMF</a>
+    Datos provistos por la <a href=\"https://www.cmfchile.cl\" target=\"_blank\">CMF</a>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
