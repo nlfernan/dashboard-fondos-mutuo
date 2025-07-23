@@ -13,17 +13,19 @@ if not os.path.exists(file_path):
     st.error("❌ No se encontró el archivo 'ffmm_merged.parquet'. Verificá que esté subido al repositorio.")
     st.stop()
 
-try:
+# -------------------------------
+# Función cacheada para cargar datos
+# -------------------------------
+@st.cache_data
+def cargar_datos_parquet(path):
     columnas_necesarias = [
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
         "PATRIMONIO_NETO_MM", "VENTA_NETA_MM"
     ]
+    return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
-    df = pd.read_parquet(
-        file_path,
-        columns=columnas_necesarias,
-        engine="pyarrow"
-    )
+try:
+    df = cargar_datos_parquet(file_path)
 except Exception as e:
     st.error(f"❌ Error al leer el archivo Parquet: {e}")
     st.stop()
