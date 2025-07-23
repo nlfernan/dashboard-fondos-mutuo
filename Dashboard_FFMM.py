@@ -20,7 +20,7 @@ if not os.path.exists(file_path):
 def cargar_datos_parquet(path):
     columnas_necesarias = [
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
-        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"  # 👈 agregado
+        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"
     ]
     return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
@@ -59,32 +59,50 @@ def multiselect_con_todo(label, opciones):
         return seleccion
 
 # -------------------------------
-# Filtro de Tipo de Fondo 👈 agregado
+# Filtros dinámicos con cache
+# -------------------------------
+@st.cache_data
+def aplicar_filtros(df, tipo, adm, fondo, serie, fechas):
+    df_filtrado = df[df["TIPO_FM"].isin(tipo)]
+    df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm)]
+    df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(fondo)]
+    df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie)]
+    df_filtrado = df_filtrado[
+        (df_filtrado["FECHA_INF_DATE"].dt.date >= fechas[0]) &
+        (df_filtrado["FECHA_INF_DATE"].dt.date <= fechas[1])
+    ]
+    return df_filtrado
+
+# -------------------------------
+# Filtros adaptativos
+# -------------------------------
+def filtro_dinamico(label, opciones):
+    if len(opciones) < 5:
+        seleccion = st.selectbox(label, opciones)
+        return [seleccion]
+    else:
+        return multiselect_con_todo(label, opciones)
+
+# -------------------------------
+# Aplicar filtros uno a uno
 # -------------------------------
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
-tipo_seleccionados = multiselect_con_todo("Tipo de Fondo", tipo_opciones)
-df_filtrado = df[df["TIPO_FM"].isin(tipo_seleccionados)]
+tipo_seleccionados = filtro_dinamico("Tipo de Fondo", tipo_opciones)
 
-# -------------------------------
-# Filtros existentes
-# -------------------------------
-adm_opciones = sorted(df_filtrado["NOM_ADM"].dropna().unique())
-adm_seleccionadas = multiselect_con_todo("Administradora(s)", adm_opciones)
-df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm_seleccionadas)]
+adm_opciones = sorted(df[df["TIPO_FM"].isin(tipo_seleccionados)]["NOM_ADM"].dropna().unique())
+adm_seleccionadas = filtro_dinamico("Administradora(s)", adm_opciones)
 
-run_nombre_opciones = sorted(df_filtrado["RUN_FM_NOMBRECORTO"].dropna().unique())
-run_nombre_seleccionados = multiselect_con_todo("Fondo(s)", run_nombre_opciones)
-df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(run_nombre_seleccionados)]
+fondo_opciones = sorted(df[df["NOM_ADM"].isin(adm_seleccionadas)]["RUN_FM_NOMBRECORTO"].dropna().unique())
+fondo_seleccionados = filtro_dinamico("Fondo(s)", fondo_opciones)
 
-serie_opciones = sorted(df_filtrado["SERIE"].dropna().unique())
-serie_seleccionadas = multiselect_con_todo("Serie(s)", serie_opciones)
-df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie_seleccionadas)]
+serie_opciones = sorted(df[df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]["SERIE"].dropna().unique())
+serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
 # -------------------------------
 # Filtro de fechas
 # -------------------------------
 st.markdown("### Rango de Fechas")
-fechas_disponibles = df_filtrado["FECHA_INF_DATE"].dropna()
+fechas_disponibles = df["FECHA_INF_DATE"].dropna()
 
 if not fechas_disponibles.empty:
     fecha_min = fechas_disponibles.min().date()
@@ -95,16 +113,15 @@ if not fechas_disponibles.empty:
         max_value=fecha_max,
         value=(fecha_min, fecha_max)
     )
-    df_filtrado = df_filtrado[
-        (df_filtrado["FECHA_INF_DATE"].dt.date >= rango_fechas[0]) &
-        (df_filtrado["FECHA_INF_DATE"].dt.date <= rango_fechas[1])
-    ]
 else:
     st.warning("No hay fechas disponibles para este filtro.")
+    st.stop()
 
 # -------------------------------
-# Validar que haya datos
+# Aplicar todos los filtros juntos
 # -------------------------------
+df_filtrado = aplicar_filtros(df, tipo_seleccionados, adm_seleccionadas, fondo_seleccionados, serie_seleccionadas, rango_fechas)
+
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
     st.stop()
@@ -112,7 +129,7 @@ if df_filtrado.empty:
 # -------------------------------
 # Tabs
 # -------------------------------
-tab1, tab2 = st.tabs(["Patrimonio Neto Total (MM CLP)", "Venta Neta Total (MM CLP)"])
+tab1, tab2 = st.tabs(["Patrimonio Neto Total (MM CLP)", "Venta Neta Acumulada (MM CLP)"])
 
 with tab1:
     st.subheader("Evolución del Patrimonio Neto Total (en millones de CLP)")
@@ -124,20 +141,21 @@ with tab1:
     st.bar_chart(patrimonio_total, height=300, use_container_width=True)
 
 with tab2:
-    st.subheader("Evolución de la Venta Neta Total (en millones de CLP)")
-    venta_neta_por_dia = (
+    st.subheader("Evolución acumulada de la Venta Neta (en millones de CLP)")
+    venta_neta_acumulada = (
         df_filtrado.groupby("FECHA_INF_DATE")["VENTA_NETA_MM"]
         .sum()
+        .cumsum()
         .sort_index()
     )
-    st.bar_chart(venta_neta_por_dia, height=300, use_container_width=True)
+    st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 # -------------------------------
 # Descargar CSV
 # -------------------------------
 st.markdown("### Descargar datos filtrados")
 st.download_button(
-    label="📥 Descargar CSV",
+    label="👅 Descargar CSV",
     data=df_filtrado.to_csv(index=False).encode("utf-8-sig"),
     file_name="ffmm_filtrado.csv",
     mime="text/csv"
