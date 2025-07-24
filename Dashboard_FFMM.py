@@ -85,12 +85,9 @@ def filtro_dinamico(label, opciones):
         return multiselect_con_todo(label, opciones)
 
 # -------------------------------
-# Aplicar filtros uno a uno
+# Aplicar filtros
 # -------------------------------
-tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
-tipo_seleccionados = filtro_dinamico("Tipo de Fondo", tipo_opciones)
-
-categoria_opciones = sorted(df[df["TIPO_FM"].isin(tipo_seleccionados)]["Categoría"].dropna().unique())
+categoria_opciones = sorted(df["Categoría"].dropna().unique())
 categoria_seleccionadas = filtro_dinamico("Categoría", categoria_opciones)
 
 adm_opciones = sorted(df[df["Categoría"].isin(categoria_seleccionadas)]["NOM_ADM"].dropna().unique())
@@ -99,10 +96,12 @@ adm_seleccionadas = filtro_dinamico("Administradora(s)", adm_opciones)
 fondo_opciones = sorted(df[df["NOM_ADM"].isin(adm_seleccionadas)]["RUN_FM_NOMBRECORTO"].dropna().unique())
 fondo_seleccionados = filtro_dinamico("Fondo(s)", fondo_opciones)
 
-serie_opciones = sorted(df[df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]["SERIE"].dropna().unique())
 with st.expander("🔧 Filtros adicionales"):
-    serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
+    tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
+    tipo_seleccionados = filtro_dinamico("Tipo de Fondo", tipo_opciones)
 
+    serie_opciones = sorted(df[df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]["SERIE"].dropna().unique())
+    serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
 # -------------------------------
 # Filtro de fechas
