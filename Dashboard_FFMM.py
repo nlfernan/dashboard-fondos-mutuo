@@ -177,15 +177,15 @@ with tab3:
     )
 
     tabla_fondos["URL CMF"] = tabla_fondos["RUN_FM"].astype(str).apply(generar_url_cmf)
+    tabla_fondos = tabla_fondos.rename(columns={
+        "RUN_FM": "RUT",
+        "Nombre_Corto": "Nombre del Fondo",
+        "NOM_ADM": "Administradora"
+    })
 
-    st.dataframe(
-        tabla_fondos.rename(columns={
-            "RUN_FM": "RUT",
-            "Nombre_Corto": "Nombre del Fondo",
-            "NOM_ADM": "Administradora"
-        }),
-        use_container_width=True
-    )
+    tabla_fondos["URL CMF"] = tabla_fondos["URL CMF"].apply(lambda x: f'<a href="{x}" target="_blank">Ver en CMF</a>')
+
+    st.markdown(tabla_fondos.to_html(index=False, escape=False), unsafe_allow_html=True)
 
 # -------------------------------
 # Descargar CSV (limitado a 100.000 filas)
