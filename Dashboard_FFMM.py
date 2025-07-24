@@ -56,6 +56,12 @@ st.markdown('''
 # -------------------------------
 # Filtros básicos
 # -------------------------------
+
+columnas_utilizadas = [
+    "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
+    "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"
+]
+
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
 tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
 
