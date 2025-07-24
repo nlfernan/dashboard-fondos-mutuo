@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
@@ -7,6 +6,12 @@ import os
 # -------------------------------
 # Ruta y validación del archivo
 # -------------------------------
+st.markdown(
+    '⚠️ **Si la app no carga o se cae al iniciar**, puede ser que el archivo Parquet sea **demasiado pesado** '
+    'para el entorno de Streamlit Cloud. Considerá filtrar los datos o reducir el tamaño del archivo '
+    '`ffmm_merged.parquet` antes de subirlo.'
+)
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")
 
@@ -49,31 +54,25 @@ st.markdown('''
 ''', unsafe_allow_html=True)
 
 # -------------------------------
-# Filtros dinámicos estilo QlikView
+# Filtros básicos
 # -------------------------------
-def multiselect_con_todos(label, opciones, key):
-    seleccionados = st.multiselect(label, opciones, default=opciones, key=key)
-    if set(seleccionados) == set(opciones):
-        seleccionados = opciones
-    return seleccionados
-
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
-tipo_seleccionados = multiselect_con_todos("Tipo de Fondo", tipo_opciones, key="tipo")
+tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
 
 df_tmp = df[df["TIPO_FM"].isin(tipo_seleccionados)]
 
 adm_opciones = sorted(df_tmp["NOM_ADM"].dropna().unique())
-adm_seleccionadas = multiselect_con_todos("Administradora(s)", adm_opciones, key="adm")
+adm_seleccionadas = st.multiselect("Administradora(s)", adm_opciones, default=adm_opciones)
 
 df_tmp = df_tmp[df_tmp["NOM_ADM"].isin(adm_seleccionadas)]
 
 fondo_opciones = sorted(df_tmp["RUN_FM_NOMBRECORTO"].dropna().unique())
-fondo_seleccionados = multiselect_con_todos("Fondo(s)", fondo_opciones, key="fondo")
+fondo_seleccionados = st.multiselect("Fondo(s)", fondo_opciones, default=fondo_opciones)
 
 df_tmp = df_tmp[df_tmp["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
 
 serie_opciones = sorted(df_tmp["SERIE"].dropna().unique())
-serie_seleccionadas = multiselect_con_todos("Serie(s)", serie_opciones, key="serie")
+serie_seleccionadas = st.multiselect("Serie(s)", serie_opciones, default=serie_opciones)
 
 # -------------------------------
 # Filtro de fechas
