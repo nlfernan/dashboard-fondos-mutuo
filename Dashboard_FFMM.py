@@ -54,10 +54,12 @@ if st.button("🔄 Resetear filtros"):
     st.rerun()
 
 def multiselect_con_todos(label, opciones, key):
-    seleccionados = st.multiselect(label, opciones, default=opciones, key=key)
-    if set(seleccionados) == set(opciones):
-        seleccionados = opciones
-    return seleccionados
+    opciones_con_todos = ['✅ Seleccionar todos'] + list(opciones)
+    seleccion = st.multiselect(label, opciones_con_todos, default=['✅ Seleccionar todos'], key=key)
+    if '✅ Seleccionar todos' in seleccion:
+        return list(opciones)
+    else:
+        return seleccion
 
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
 tipo_seleccionados = multiselect_con_todos("Tipo de Fondo", tipo_opciones, key="tipo")
