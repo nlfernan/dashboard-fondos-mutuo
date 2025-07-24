@@ -2,13 +2,12 @@
 import streamlit as st
 import pandas as pd
 import os
-import gc
 
 # -------------------------------
 # Ruta y validación del archivo
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")  # ← USAMOS EL ORIGINAL
+file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")
 
 if not os.path.exists(file_path):
     st.error("❌ No se encontró el archivo 'ffmm_merged.parquet'. Verificá que esté subido al repositorio.")
@@ -21,18 +20,21 @@ if not os.path.exists(file_path):
 def cargar_datos_parquet(path):
     columnas_necesarias = [
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
-        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM", "Categoría"
+        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"
     ]
-    df = pd.read_parquet(path, columns=columnas_necesarias)  # 👈 sin engine="pyarrow"
-    df["FECHA_INF_DATE"] = pd.to_datetime(df["FECHA_INF"], format="%Y%m%d", errors="coerce")
-    df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"].astype(str)
-    return df
+    return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
 try:
     df = cargar_datos_parquet(file_path)
 except Exception as e:
     st.error(f"❌ Error al leer el archivo Parquet: {e}")
     st.stop()
+
+# -------------------------------
+# Preprocesamiento
+# -------------------------------
+df["FECHA_INF_DATE"] = pd.to_datetime(df["FECHA_INF"], format="%Y%m%d", errors="coerce")
+df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"].astype(str)
 
 # -------------------------------
 # Título con logo
@@ -48,25 +50,33 @@ st.markdown("""
 # -------------------------------
 # Filtros dinámicos estilo QlikView
 # -------------------------------
+
+# Botón para resetear filtros
 if st.button("🔄 Resetear filtros"):
     st.experimental_rerun()
 
+# Filtro: Tipo de Fondo
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
 tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
+
+# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df[df["TIPO_FM"].isin(tipo_seleccionados)]
 
-categoria_opciones = sorted(df_tmp["Categoría"].dropna().unique())
-categoria_seleccionadas = st.multiselect("Categoría", categoria_opciones, default=categoria_opciones)
-df_tmp = df_tmp[df_tmp["Categoría"].isin(categoria_seleccionadas)]
-
+# Filtro: Administradora(s)
 adm_opciones = sorted(df_tmp["NOM_ADM"].dropna().unique())
 adm_seleccionadas = st.multiselect("Administradora(s)", adm_opciones, default=adm_opciones)
+
+# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df_tmp[df_tmp["NOM_ADM"].isin(adm_seleccionadas)]
 
+# Filtro: Fondo(s)
 fondo_opciones = sorted(df_tmp["RUN_FM_NOMBRECORTO"].dropna().unique())
 fondo_seleccionados = st.multiselect("Fondo(s)", fondo_opciones, default=fondo_opciones)
+
+# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df_tmp[df_tmp["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
 
+# Filtro: Serie(s)
 serie_opciones = sorted(df_tmp["SERIE"].dropna().unique())
 serie_seleccionadas = st.multiselect("Serie(s)", serie_opciones, default=serie_opciones)
 
@@ -93,7 +103,6 @@ else:
 # -------------------------------
 df_filtrado = df[
     df["TIPO_FM"].isin(tipo_seleccionados) &
-    df["Categoría"].isin(categoria_seleccionadas) &
     df["NOM_ADM"].isin(adm_seleccionadas) &
     df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados) &
     df["SERIE"].isin(serie_seleccionadas) &
@@ -104,8 +113,6 @@ df_filtrado = df[
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
     st.stop()
-
-st.markdown(f"**🔎 Registros filtrados: {df_filtrado.shape[0]:,} filas**")
 
 # -------------------------------
 # Tabs
@@ -132,38 +139,28 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 # -------------------------------
-# Descargar CSV solo si hay menos de X filas
+# Descargar CSV optimizado con cache
 # -------------------------------
-MAX_FILAS_DESCARGA = 10_000
+@st.cache_data
+def generar_csv(df_filtrado):
+    return df_filtrado.to_csv(index=False).encode("utf-8-sig")
 
-if df_filtrado.shape[0] > MAX_FILAS_DESCARGA:
-    st.warning(f"⚠️ Demasiadas filas para descargar ({df_filtrado.shape[0]:,} filas). Aplicá más filtros para habilitar la descarga (máximo permitido: {MAX_FILAS_DESCARGA:,} filas).")
-else:
-    @st.cache_data
-    def generar_csv(df_filtrado):
-        return df_filtrado.to_csv(index=False).encode("utf-8-sig")
+csv_data = generar_csv(df_filtrado)
 
-    csv_data = generar_csv(df_filtrado)
-
-    st.markdown("### Descargar datos filtrados")
-    st.download_button(
-        label="⬇️ Descargar CSV",
-        data=csv_data,
-        file_name="ffmm_filtrado.csv",
-        mime="text/csv"
-    )
-
-# -------------------------------
-# Liberar memoria manualmente
-# -------------------------------
-gc.collect()
+st.markdown("### Descargar datos filtrados")
+st.download_button(
+    label="⬇️ Descargar CSV",
+    data=csv_data,
+    file_name="ffmm_filtrado.csv",
+    mime="text/csv"
+)
 
 # -------------------------------
 # Footer
 # -------------------------------
 st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 
-st.markdown("""
+footer = """
 <style>
 .footer {
     position: fixed;
@@ -184,4 +181,5 @@ st.markdown("""
     Autor: Nicolás Fernández Ponce, CFA | Este dashboard muestra la evolución del patrimonio y las ventas netas de fondos mutuos en Chile.  
     Datos provistos por la <a href="https://www.cmfchile.cl" target="_blank">CMF</a>
 </div>
-""", unsafe_allow_html=True)
+"""
+st.markdown(footer, unsafe_allow_html=True)
