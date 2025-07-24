@@ -39,46 +39,43 @@ df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"]
 # -------------------------------
 # Título con logo
 # -------------------------------
-st.markdown("""
+st.markdown('''
 <div style='display: flex; align-items: center; gap: 15px; padding-top: 10px;'>
     <img src='https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Owl_in_the_Moonlight.jpg/640px-Owl_in_the_Moonlight.jpg'
          width='60' style='border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.2);'/>
     <h1 style='margin: 0; font-size: 2.2em;'>Dashboard Fondos Mutuos</h1>
 </div>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 # -------------------------------
 # Filtros dinámicos estilo QlikView
 # -------------------------------
-
-# Botón para resetear filtros
 if st.button("🔄 Resetear filtros"):
-    st.experimental_rerun()
+    st.rerun()
 
-# Filtro: Tipo de Fondo
+def multiselect_con_todos(label, opciones, key):
+    seleccionados = st.multiselect(label, opciones, default=opciones, key=key)
+    if set(seleccionados) == set(opciones):
+        seleccionados = opciones
+    return seleccionados
+
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
-tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
+tipo_seleccionados = multiselect_con_todos("Tipo de Fondo", tipo_opciones, key="tipo")
 
-# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df[df["TIPO_FM"].isin(tipo_seleccionados)]
 
-# Filtro: Administradora(s)
 adm_opciones = sorted(df_tmp["NOM_ADM"].dropna().unique())
-adm_seleccionadas = st.multiselect("Administradora(s)", adm_opciones, default=adm_opciones)
+adm_seleccionadas = multiselect_con_todos("Administradora(s)", adm_opciones, key="adm")
 
-# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df_tmp[df_tmp["NOM_ADM"].isin(adm_seleccionadas)]
 
-# Filtro: Fondo(s)
 fondo_opciones = sorted(df_tmp["RUN_FM_NOMBRECORTO"].dropna().unique())
-fondo_seleccionados = st.multiselect("Fondo(s)", fondo_opciones, default=fondo_opciones)
+fondo_seleccionados = multiselect_con_todos("Fondo(s)", fondo_opciones, key="fondo")
 
-# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df_tmp[df_tmp["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
 
-# Filtro: Serie(s)
 serie_opciones = sorted(df_tmp["SERIE"].dropna().unique())
-serie_seleccionadas = st.multiselect("Serie(s)", serie_opciones, default=serie_opciones)
+serie_seleccionadas = multiselect_con_todos("Serie(s)", serie_opciones, key="serie")
 
 # -------------------------------
 # Filtro de fechas
@@ -160,7 +157,7 @@ st.download_button(
 # -------------------------------
 st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 
-footer = """
+st.markdown('''
 <style>
 .footer {
     position: fixed;
@@ -181,5 +178,4 @@ footer = """
     Autor: Nicolás Fernández Ponce, CFA | Este dashboard muestra la evolución del patrimonio y las ventas netas de fondos mutuos en Chile.  
     Datos provistos por la <a href="https://www.cmfchile.cl" target="_blank">CMF</a>
 </div>
-"""
-st.markdown(footer, unsafe_allow_html=True)
+''', unsafe_allow_html=True)
