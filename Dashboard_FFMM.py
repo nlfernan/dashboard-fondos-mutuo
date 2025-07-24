@@ -48,62 +48,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------
-# Multiselect con "Seleccionar todo"
+# Filtros dinámicos estilo QlikView
 # -------------------------------
-def multiselect_con_todo(label, opciones):
-    opciones_mostradas = ["(Seleccionar todo)"] + list(opciones)
-    seleccion = st.multiselect(label, opciones_mostradas, default=["(Seleccionar todo)"])
-    if "(Seleccionar todo)" in seleccion or not seleccion:
-        return list(opciones)
-    else:
-        return seleccion
 
-# -------------------------------
-# Filtros dinámicos con cache
-# -------------------------------
-@st.cache_data
-def aplicar_filtros(df, tipo, adm, fondo, serie, fechas):
-    df_filtrado = df[df["TIPO_FM"].isin(tipo)]
-    df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm)]
-    df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(fondo)]
-    df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie)]
-    df_filtrado = df_filtrado[
-        (df_filtrado["FECHA_INF_DATE"].dt.date >= fechas[0]) &
-        (df_filtrado["FECHA_INF_DATE"].dt.date <= fechas[1])
-    ]
-    return df_filtrado
+# Botón para resetear filtros
+if st.button("🔄 Resetear filtros"):
+    st.experimental_rerun()
 
-# -------------------------------
-# Filtros adaptativos
-# -------------------------------
-def filtro_dinamico(label, opciones):
-    if len(opciones) < 5:
-        seleccion = st.selectbox(label, opciones)
-        return [seleccion]
-    else:
-        return multiselect_con_todo(label, opciones)
-
-# -------------------------------
-# Aplicar filtros uno a uno
-# -------------------------------
+# Filtro: Tipo de Fondo
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
-tipo_seleccionados = filtro_dinamico("Tipo de Fondo", tipo_opciones)
+tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
 
-adm_opciones = sorted(df[df["TIPO_FM"].isin(tipo_seleccionados)]["NOM_ADM"].dropna().unique())
-adm_seleccionadas = filtro_dinamico("Administradora(s)", adm_opciones)
+# Filtrar dataset parcialmente para siguientes opciones
+df_tmp = df[df["TIPO_FM"].isin(tipo_seleccionados)]
 
-fondo_opciones = sorted(df[df["NOM_ADM"].isin(adm_seleccionadas)]["RUN_FM_NOMBRECORTO"].dropna().unique())
-fondo_seleccionados = filtro_dinamico("Fondo(s)", fondo_opciones)
+# Filtro: Administradora(s)
+adm_opciones = sorted(df_tmp["NOM_ADM"].dropna().unique())
+adm_seleccionadas = st.multiselect("Administradora(s)", adm_opciones, default=adm_opciones)
 
-serie_opciones = sorted(df[df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]["SERIE"].dropna().unique())
-serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
+# Filtrar dataset parcialmente para siguientes opciones
+df_tmp = df_tmp[df_tmp["NOM_ADM"].isin(adm_seleccionadas)]
+
+# Filtro: Fondo(s)
+fondo_opciones = sorted(df_tmp["RUN_FM_NOMBRECORTO"].dropna().unique())
+fondo_seleccionados = st.multiselect("Fondo(s)", fondo_opciones, default=fondo_opciones)
+
+# Filtrar dataset parcialmente para siguientes opciones
+df_tmp = df_tmp[df_tmp["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
+
+# Filtro: Serie(s)
+serie_opciones = sorted(df_tmp["SERIE"].dropna().unique())
+serie_seleccionadas = st.multiselect("Serie(s)", serie_opciones, default=serie_opciones)
 
 # -------------------------------
 # Filtro de fechas
 # -------------------------------
 st.markdown("### Rango de Fechas")
-fechas_disponibles = df["FECHA_INF_DATE"].dropna()
-
+fechas_disponibles = df_tmp["FECHA_INF_DATE"].dropna()
 if not fechas_disponibles.empty:
     fecha_min = fechas_disponibles.min().date()
     fecha_max = fechas_disponibles.max().date()
@@ -118,9 +99,16 @@ else:
     st.stop()
 
 # -------------------------------
-# Aplicar todos los filtros juntos
+# Aplicar todos los filtros
 # -------------------------------
-df_filtrado = aplicar_filtros(df, tipo_seleccionados, adm_seleccionadas, fondo_seleccionados, serie_seleccionadas, rango_fechas)
+df_filtrado = df[
+    df["TIPO_FM"].isin(tipo_seleccionados) &
+    df["NOM_ADM"].isin(adm_seleccionadas) &
+    df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados) &
+    df["SERIE"].isin(serie_seleccionadas) &
+    (df["FECHA_INF_DATE"].dt.date >= rango_fechas[0]) &
+    (df["FECHA_INF_DATE"].dt.date <= rango_fechas[1])
+]
 
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
@@ -191,7 +179,7 @@ footer = """
 
 <div class="footer">
     Autor: Nicolás Fernández Ponce, CFA | Este dashboard muestra la evolución del patrimonio y las ventas netas de fondos mutuos en Chile.  
-    Datos provistos por la <a href=\"https://www.cmfchile.cl\" target=\"_blank\">CMF</a>
+    Datos provistos por la <a href="https://www.cmfchile.cl" target="_blank">CMF</a>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
