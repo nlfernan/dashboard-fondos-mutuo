@@ -2,5 +2,3 @@ streamlit
 pandas
 pyarrow
 numpy
-altair
-watchdog
