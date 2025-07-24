@@ -2,7 +2,6 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
 
 # -------------------------------
 # Ruta y validación del archivo
@@ -15,7 +14,7 @@ if not os.path.exists(file_path):
     st.stop()
 
 # -------------------------------
-# Funcíón cacheada para cargar datos
+# Función cacheada para cargar datos
 # -------------------------------
 @st.cache_data
 def cargar_datos_parquet(path):
@@ -138,11 +137,7 @@ if df_filtrado.empty:
 # -------------------------------
 # Tabs
 # -------------------------------
-tab1, tab2, tab3 = st.tabs([
-    "Patrimonio Neto Total (MM CLP)",
-    "Venta Neta Acumulada (MM CLP)",
-    "Listado de Fondos Mutuos"
-])
+tab1, tab2 = st.tabs(["Patrimonio Neto Total (MM CLP)", "Venta Neta Acumulada (MM CLP)"])
 
 with tab1:
     st.subheader("Evolución del Patrimonio Neto Total (en millones de CLP)")
@@ -163,80 +158,13 @@ with tab2:
     )
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
-with tab3:
-    st.subheader("📋 Listado de Fondos Mutuos")
-
-    df_listado = (
-        df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]]
-        .drop_duplicates()
-        .copy()
-    )
-
-    df_listado["URL_CMf"] = df_listado["RUN_FM"].astype(str).apply(
-        lambda rut: f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
-    )
-
-    tabla_html = """
-    <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 14px;
-        }
-        th, td {
-            text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        tr:hover {background-color: #f9f9f9;}
-    </style>
-    <table>
-        <thead>
-            <tr>
-                <th>RUT</th>
-                <th>Nombre</th>
-                <th>Administradora</th>
-                <th>Ver en CMF</th>
-            </tr>
-        </thead>
-        <tbody>
-    """
-
-    for _, row in df_listado.iterrows():
-        tabla_html += f"""
-        <tr>
-            <td>{row['RUN_FM']}</td>
-            <td>{row['Nombre_Corto']}</td>
-            <td>{row['NOM_ADM']}</td>
-            <td><a href=\"{row['URL_CMf']}\" target=\"_blank\">🔗 Ver</a></td>
-        </tr>
-        """
-
-    tabla_html += "</tbody></table>"
-    st.markdown(tabla_html, unsafe_allow_html=True)
-
-    @st.cache_data
-    def generar_csv_listado(df):
-        df_export = df[["RUN_FM", "Nombre_Corto", "NOM_ADM", "URL_CMf"]].copy()
-        df_export.columns = ["RUN_FM", "Nombre", "Administradora", "URL_CMf"]
-        return df_export.to_csv(index=False).encode("utf-8-sig")
-
-    st.download_button(
-        label="⬇️ Descargar listado como CSV",
-        data=generar_csv_listado(df_listado),
-        file_name=f"listado_fondos_{datetime.now().date()}.csv",
-        mime="text/csv"
-    )
-
 # -------------------------------
 # Descargar CSV (limitado a 100.000 filas)
 # -------------------------------
 st.markdown("### Descargar datos filtrados")
 
 MAX_FILAS = 100_000
+
 st.caption(f"🔢 Total de filas: {df_filtrado.shape[0]:,}")
 
 if df_filtrado.shape[0] > MAX_FILAS:
