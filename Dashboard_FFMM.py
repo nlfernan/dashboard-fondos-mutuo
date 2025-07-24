@@ -137,7 +137,11 @@ if df_filtrado.empty:
 # -------------------------------
 # Tabs
 # -------------------------------
-tab1, tab2 = st.tabs(["Patrimonio Neto Total (MM CLP)", "Venta Neta Acumulada (MM CLP)"])
+tab1, tab2, tab3 = st.tabs([
+    "Patrimonio Neto Total (MM CLP)",
+    "Venta Neta Acumulada (MM CLP)",
+    "Listado de Fondos Mutuos"
+])
 
 with tab1:
     st.subheader("Evolución del Patrimonio Neto Total (en millones de CLP)")
@@ -158,13 +162,38 @@ with tab2:
     )
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
+with tab3:
+    st.subheader("Listado de Fondos Mutuos (máx. 15 fondos)")
+
+    def generar_url_cmf(rut):
+        return f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
+
+    tabla_fondos = (
+        df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]]
+        .drop_duplicates()
+        .head(15)
+        .copy()
+    )
+
+    tabla_fondos["URL"] = tabla_fondos["RUN_FM"].astype(str).apply(generar_url_cmf)
+
+    def render_link(row):
+        return f'<a href="{row.URL}" target="_blank">Ver en CMF</a>'
+
+    tabla_html = tabla_fondos.copy()
+    tabla_html["URL"] = tabla_html.apply(render_link, axis=1)
+
+    st.markdown(
+        tabla_html.to_html(index=False, escape=False),
+        unsafe_allow_html=True
+    )
+
 # -------------------------------
 # Descargar CSV (limitado a 100.000 filas)
 # -------------------------------
 st.markdown("### Descargar datos filtrados")
 
 MAX_FILAS = 100_000
-
 st.caption(f"🔢 Total de filas: {df_filtrado.shape[0]:,}")
 
 if df_filtrado.shape[0] > MAX_FILAS:
