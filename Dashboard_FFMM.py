@@ -8,14 +8,14 @@ import gc
 # Ruta y validación del archivo
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(BASE_DIR, "ffmm_merged_opt.parquet")
+file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")  # ← USAMOS EL ORIGINAL
 
 if not os.path.exists(file_path):
-    st.error("❌ No se encontró el archivo 'ffmm_merged_opt.parquet'. Verificá que esté subido al repositorio.")
+    st.error("❌ No se encontró el archivo 'ffmm_merged.parquet'. Verificá que esté subido al repositorio.")
     st.stop()
 
 # -------------------------------
-# Función cacheada para cargar datos optimizados
+# Función cacheada para cargar datos
 # -------------------------------
 @st.cache_data
 def cargar_datos_parquet(path):
