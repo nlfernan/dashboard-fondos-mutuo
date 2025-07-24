@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pandas as pd
@@ -50,9 +51,6 @@ st.markdown('''
 # -------------------------------
 # Filtros dinámicos estilo QlikView
 # -------------------------------
-if st.button("🔄 Resetear filtros"):
-    st.rerun()
-
 def multiselect_con_todos(label, opciones, key):
     opciones_con_todos = ['✅ Seleccionar todos'] + list(opciones)
     seleccion = st.multiselect(label, opciones_con_todos, default=['✅ Seleccionar todos'], key=key)
