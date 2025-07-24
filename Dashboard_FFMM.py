@@ -159,21 +159,29 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 # -------------------------------
-# Descargar CSV optimizado con cache
+# Descargar CSV (limitado a 100.000 filas)
 # -------------------------------
-@st.cache_data
-def generar_csv(df_filtrado):
-    return df_filtrado.to_csv(index=False).encode("utf-8-sig")
-
-csv_data = generar_csv(df_filtrado)
-
 st.markdown("### Descargar datos filtrados")
-st.download_button(
-    label="⬇️ Descargar CSV",
-    data=csv_data,
-    file_name="ffmm_filtrado.csv",
-    mime="text/csv"
-)
+
+MAX_FILAS = 100_000
+
+st.caption(f"🔢 Total de filas: {df_filtrado.shape[0]:,}")
+
+if df_filtrado.shape[0] > MAX_FILAS:
+    st.warning(f"⚠️ La descarga está limitada a {MAX_FILAS:,} filas. Aplicá más filtros para reducir el tamaño (actual: {df_filtrado.shape[0]:,} filas).")
+else:
+    @st.cache_data
+    def generar_csv(df):
+        return df.to_csv(index=False).encode("utf-8-sig")
+
+    csv_data = generar_csv(df_filtrado)
+
+    st.download_button(
+        label="⬇️ Descargar CSV",
+        data=csv_data,
+        file_name="ffmm_filtrado.csv",
+        mime="text/csv"
+    )
 
 # -------------------------------
 # Footer
