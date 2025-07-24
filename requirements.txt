@@ -1,4 +1,4 @@
-streamlit
-pandas
-pyarrow
-numpy
+streamlit==1.47.0
+pandas==2.3.1
+numpy==2.3.1
+pyarrow==21.0.0
