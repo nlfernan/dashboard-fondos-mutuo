@@ -20,7 +20,7 @@ if not os.path.exists(file_path):
 def cargar_datos_parquet(path):
     columnas_necesarias = [
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
-        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"
+        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM", "Categoría"
     ]
     return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
@@ -50,30 +50,27 @@ st.markdown("""
 # -------------------------------
 # Filtros dinámicos estilo QlikView
 # -------------------------------
-
-# Botón para resetear filtros
 if st.button("🔄 Resetear filtros"):
     st.experimental_rerun()
 
 # Filtro: Tipo de Fondo
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
 tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
-
-# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df[df["TIPO_FM"].isin(tipo_seleccionados)]
+
+# Filtro: Categoría
+categoria_opciones = sorted(df_tmp["Categoría"].dropna().unique())
+categoria_seleccionadas = st.multiselect("Categoría", categoria_opciones, default=categoria_opciones)
+df_tmp = df_tmp[df_tmp["Categoría"].isin(categoria_seleccionadas)]
 
 # Filtro: Administradora(s)
 adm_opciones = sorted(df_tmp["NOM_ADM"].dropna().unique())
 adm_seleccionadas = st.multiselect("Administradora(s)", adm_opciones, default=adm_opciones)
-
-# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df_tmp[df_tmp["NOM_ADM"].isin(adm_seleccionadas)]
 
 # Filtro: Fondo(s)
 fondo_opciones = sorted(df_tmp["RUN_FM_NOMBRECORTO"].dropna().unique())
 fondo_seleccionados = st.multiselect("Fondo(s)", fondo_opciones, default=fondo_opciones)
-
-# Filtrar dataset parcialmente para siguientes opciones
 df_tmp = df_tmp[df_tmp["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
 
 # Filtro: Serie(s)
@@ -103,6 +100,7 @@ else:
 # -------------------------------
 df_filtrado = df[
     df["TIPO_FM"].isin(tipo_seleccionados) &
+    df["Categoría"].isin(categoria_seleccionadas) &
     df["NOM_ADM"].isin(adm_seleccionadas) &
     df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados) &
     df["SERIE"].isin(serie_seleccionadas) &
