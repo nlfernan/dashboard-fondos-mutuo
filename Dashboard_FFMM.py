@@ -20,7 +20,7 @@ if not os.path.exists(file_path):
 def cargar_datos_parquet(path):
     columnas_necesarias = [
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
-        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM"
+        "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM", "Categoría"
     ]
     return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
@@ -62,8 +62,9 @@ def multiselect_con_todo(label, opciones):
 # Filtros dinámicos con cache
 # -------------------------------
 @st.cache_data
-def aplicar_filtros(df, tipo, adm, fondo, serie, fechas):
+def aplicar_filtros(df, tipo, categoria, adm, fondo, serie, fechas):
     df_filtrado = df[df["TIPO_FM"].isin(tipo)]
+    df_filtrado = df_filtrado[df_filtrado["Categoría"].isin(categoria)]
     df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm)]
     df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(fondo)]
     df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie)]
@@ -89,7 +90,10 @@ def filtro_dinamico(label, opciones):
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
 tipo_seleccionados = filtro_dinamico("Tipo de Fondo", tipo_opciones)
 
-adm_opciones = sorted(df[df["TIPO_FM"].isin(tipo_seleccionados)]["NOM_ADM"].dropna().unique())
+categoria_opciones = sorted(df[df["TIPO_FM"].isin(tipo_seleccionados)]["Categoría"].dropna().unique())
+categoria_seleccionadas = filtro_dinamico("Categoría", categoria_opciones)
+
+adm_opciones = sorted(df[df["Categoría"].isin(categoria_seleccionadas)]["NOM_ADM"].dropna().unique())
 adm_seleccionadas = filtro_dinamico("Administradora(s)", adm_opciones)
 
 fondo_opciones = sorted(df[df["NOM_ADM"].isin(adm_seleccionadas)]["RUN_FM_NOMBRECORTO"].dropna().unique())
@@ -120,7 +124,10 @@ else:
 # -------------------------------
 # Aplicar todos los filtros juntos
 # -------------------------------
-df_filtrado = aplicar_filtros(df, tipo_seleccionados, adm_seleccionadas, fondo_seleccionados, serie_seleccionadas, rango_fechas)
+df_filtrado = aplicar_filtros(
+    df, tipo_seleccionados, categoria_seleccionadas,
+    adm_seleccionadas, fondo_seleccionados, serie_seleccionadas, rango_fechas
+)
 
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
@@ -191,7 +198,7 @@ footer = """
 
 <div class="footer">
     Autor: Nicolás Fernández Ponce, CFA | Este dashboard muestra la evolución del patrimonio y las ventas netas de fondos mutuos en Chile.  
-    Datos provistos por la <a href=\"https://www.cmfchile.cl\" target=\"_blank\">CMF</a>
+    Datos provistos por la <a href="https://www.cmfchile.cl" target="_blank">CMF</a>
 </div>
 """
 st.markdown(footer, unsafe_allow_html=True)
