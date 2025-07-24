@@ -2,19 +2,20 @@
 import streamlit as st
 import pandas as pd
 import os
+import gc
 
 # -------------------------------
 # Ruta y validación del archivo
 # -------------------------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-file_path = os.path.join(BASE_DIR, "ffmm_merged.parquet")
+file_path = os.path.join(BASE_DIR, "ffmm_merged_opt.parquet")
 
 if not os.path.exists(file_path):
-    st.error("❌ No se encontró el archivo 'ffmm_merged.parquet'. Verificá que esté subido al repositorio.")
+    st.error("❌ No se encontró el archivo 'ffmm_merged_opt.parquet'. Verificá que esté subido al repositorio.")
     st.stop()
 
 # -------------------------------
-# Función cacheada para cargar datos
+# Función cacheada para cargar datos optimizados
 # -------------------------------
 @st.cache_data
 def cargar_datos_parquet(path):
@@ -22,19 +23,16 @@ def cargar_datos_parquet(path):
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
         "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM", "Categoría"
     ]
-    return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
+    df = pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
+    df["FECHA_INF_DATE"] = pd.to_datetime(df["FECHA_INF"], format="%Y%m%d", errors="coerce")
+    df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"].astype(str)
+    return df
 
 try:
     df = cargar_datos_parquet(file_path)
 except Exception as e:
     st.error(f"❌ Error al leer el archivo Parquet: {e}")
     st.stop()
-
-# -------------------------------
-# Preprocesamiento
-# -------------------------------
-df["FECHA_INF_DATE"] = pd.to_datetime(df["FECHA_INF"], format="%Y%m%d", errors="coerce")
-df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"].astype(str)
 
 # -------------------------------
 # Título con logo
@@ -112,6 +110,9 @@ if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
     st.stop()
 
+# Mostrar cuántas filas hay tras filtrar
+st.markdown(f"**🔎 Registros filtrados: {df_filtrado.shape[0]:,} filas**")
+
 # -------------------------------
 # Tabs
 # -------------------------------
@@ -137,28 +138,38 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 # -------------------------------
-# Descargar CSV optimizado con cache
+# Descargar CSV solo si hay menos de X filas
 # -------------------------------
-@st.cache_data
-def generar_csv(df_filtrado):
-    return df_filtrado.to_csv(index=False).encode("utf-8-sig")
+MAX_FILAS_DESCARGA = 10_000
 
-csv_data = generar_csv(df_filtrado)
+if df_filtrado.shape[0] > MAX_FILAS_DESCARGA:
+    st.warning(f"⚠️ Demasiadas filas para descargar ({df_filtrado.shape[0]:,} filas). Aplicá más filtros para habilitar la descarga (máximo permitido: {MAX_FILAS_DESCARGA:,} filas).")
+else:
+    @st.cache_data
+    def generar_csv(df_filtrado):
+        return df_filtrado.to_csv(index=False).encode("utf-8-sig")
 
-st.markdown("### Descargar datos filtrados")
-st.download_button(
-    label="⬇️ Descargar CSV",
-    data=csv_data,
-    file_name="ffmm_filtrado.csv",
-    mime="text/csv"
-)
+    csv_data = generar_csv(df_filtrado)
+
+    st.markdown("### Descargar datos filtrados")
+    st.download_button(
+        label="⬇️ Descargar CSV",
+        data=csv_data,
+        file_name="ffmm_filtrado.csv",
+        mime="text/csv"
+    )
+
+# -------------------------------
+# Liberar memoria manualmente
+# -------------------------------
+gc.collect()
 
 # -------------------------------
 # Footer
 # -------------------------------
 st.markdown("<br><br><br><br>", unsafe_allow_html=True)
 
-footer = """
+st.markdown("""
 <style>
 .footer {
     position: fixed;
@@ -179,5 +190,4 @@ footer = """
     Autor: Nicolás Fernández Ponce, CFA | Este dashboard muestra la evolución del patrimonio y las ventas netas de fondos mutuos en Chile.  
     Datos provistos por la <a href="https://www.cmfchile.cl" target="_blank">CMF</a>
 </div>
-"""
-st.markdown(footer, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
