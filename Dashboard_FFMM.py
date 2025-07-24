@@ -163,7 +163,8 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 with tab3:
-    st.subheader("Listado de Fondos Mutuos (máx. 15 fondos)")
+    total_fondos = df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]].drop_duplicates().shape[0]
+    st.subheader(f"Listado de Fondos Mutuos (máx. 20 de {total_fondos})")
 
     def generar_url_cmf(rut):
         return f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
@@ -171,21 +172,19 @@ with tab3:
     tabla_fondos = (
         df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]]
         .drop_duplicates()
-        .head(15)
+        .head(20)
         .copy()
     )
 
-    tabla_fondos["URL"] = tabla_fondos["RUN_FM"].astype(str).apply(generar_url_cmf)
+    tabla_fondos["URL CMF"] = tabla_fondos["RUN_FM"].astype(str).apply(generar_url_cmf)
 
-    def render_link(row):
-        return f'<a href="{row.URL}" target="_blank">Ver en CMF</a>'
-
-    tabla_html = tabla_fondos.copy()
-    tabla_html["URL"] = tabla_html.apply(render_link, axis=1)
-
-    st.markdown(
-        tabla_html.to_html(index=False, escape=False),
-        unsafe_allow_html=True
+    st.dataframe(
+        tabla_fondos.rename(columns={
+            "RUN_FM": "RUT",
+            "Nombre_Corto": "Nombre del Fondo",
+            "NOM_ADM": "Administradora"
+        }),
+        use_container_width=True
     )
 
 # -------------------------------
