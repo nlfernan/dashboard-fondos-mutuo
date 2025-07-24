@@ -23,7 +23,7 @@ def cargar_datos_parquet(path):
         "FECHA_INF", "RUN_FM", "Nombre_Corto", "NOM_ADM", "SERIE",
         "PATRIMONIO_NETO_MM", "VENTA_NETA_MM", "TIPO_FM", "Categoría"
     ]
-    df = pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
+    df = pd.read_parquet(path, columns=columnas_necesarias)  # 👈 sin engine="pyarrow"
     df["FECHA_INF_DATE"] = pd.to_datetime(df["FECHA_INF"], format="%Y%m%d", errors="coerce")
     df["RUN_FM_NOMBRECORTO"] = df["RUN_FM"].astype(str) + " - " + df["Nombre_Corto"].astype(str)
     return df
@@ -51,27 +51,22 @@ st.markdown("""
 if st.button("🔄 Resetear filtros"):
     st.experimental_rerun()
 
-# Filtro: Tipo de Fondo
 tipo_opciones = sorted(df["TIPO_FM"].dropna().unique())
 tipo_seleccionados = st.multiselect("Tipo de Fondo", tipo_opciones, default=tipo_opciones)
 df_tmp = df[df["TIPO_FM"].isin(tipo_seleccionados)]
 
-# Filtro: Categoría
 categoria_opciones = sorted(df_tmp["Categoría"].dropna().unique())
 categoria_seleccionadas = st.multiselect("Categoría", categoria_opciones, default=categoria_opciones)
 df_tmp = df_tmp[df_tmp["Categoría"].isin(categoria_seleccionadas)]
 
-# Filtro: Administradora(s)
 adm_opciones = sorted(df_tmp["NOM_ADM"].dropna().unique())
 adm_seleccionadas = st.multiselect("Administradora(s)", adm_opciones, default=adm_opciones)
 df_tmp = df_tmp[df_tmp["NOM_ADM"].isin(adm_seleccionadas)]
 
-# Filtro: Fondo(s)
 fondo_opciones = sorted(df_tmp["RUN_FM_NOMBRECORTO"].dropna().unique())
 fondo_seleccionados = st.multiselect("Fondo(s)", fondo_opciones, default=fondo_opciones)
 df_tmp = df_tmp[df_tmp["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
 
-# Filtro: Serie(s)
 serie_opciones = sorted(df_tmp["SERIE"].dropna().unique())
 serie_seleccionadas = st.multiselect("Serie(s)", serie_opciones, default=serie_opciones)
 
@@ -110,7 +105,6 @@ if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
     st.stop()
 
-# Mostrar cuántas filas hay tras filtrar
 st.markdown(f"**🔎 Registros filtrados: {df_filtrado.shape[0]:,} filas**")
 
 # -------------------------------
