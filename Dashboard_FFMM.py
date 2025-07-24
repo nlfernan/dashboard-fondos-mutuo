@@ -100,7 +100,9 @@ fondo_opciones = sorted(df[df["NOM_ADM"].isin(adm_seleccionadas)]["RUN_FM_NOMBRE
 fondo_seleccionados = filtro_dinamico("Fondo(s)", fondo_opciones)
 
 serie_opciones = sorted(df[df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]["SERIE"].dropna().unique())
-serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
+with st.expander("🔧 Filtros adicionales"):
+    serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
+
 
 # -------------------------------
 # Filtro de fechas
