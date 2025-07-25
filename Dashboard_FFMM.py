@@ -104,7 +104,7 @@ with st.expander("🔧 Filtros adicionales"):
     serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
 # -------------------------------
-# Filtro de fechas con calendario
+# Filtro de fechas con calendario robusto
 # -------------------------------
 st.markdown("### Rango de Fechas")
 fechas_disponibles = df["FECHA_INF_DATE"].dropna()
@@ -112,14 +112,23 @@ fechas_disponibles = df["FECHA_INF_DATE"].dropna()
 if not fechas_disponibles.empty:
     fecha_min = fechas_disponibles.min().date()
     fecha_max = fechas_disponibles.max().date()
+
     rango_fechas = st.date_input(
         "Selecciona un rango de fechas",
         value=(fecha_min, fecha_max),
         min_value=fecha_min,
         max_value=fecha_max
     )
-    if not isinstance(rango_fechas, tuple):
-        rango_fechas = (fecha_min, fecha_max)
+
+    # Asegurar siempre tupla de fechas
+    if isinstance(rango_fechas, tuple):
+        fecha_inicio, fecha_fin = rango_fechas
+    else:
+        fecha_inicio = rango_fechas
+        fecha_fin = rango_fechas
+
+    rango_fechas = (fecha_inicio, fecha_fin)
+
 else:
     st.warning("No hay fechas disponibles para este filtro.")
     st.stop()
