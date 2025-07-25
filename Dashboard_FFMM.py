@@ -2,6 +2,8 @@
 import streamlit as st
 import pandas as pd
 import os
+import calendar
+from datetime import date
 
 # -------------------------------
 # Ruta y validación del archivo
@@ -104,31 +106,31 @@ with st.expander("🔧 Filtros adicionales"):
     serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
 # -------------------------------
-# Filtro de fechas con calendario robusto
+# Filtro de fechas con Mes/Año
 # -------------------------------
 st.markdown("### Rango de Fechas")
+
 fechas_disponibles = df["FECHA_INF_DATE"].dropna()
 
 if not fechas_disponibles.empty:
-    fecha_min = fechas_disponibles.min().date()
-    fecha_max = fechas_disponibles.max().date()
+    años_disponibles = sorted(fechas_disponibles.dt.year.unique())
+    meses_disponibles = list(calendar.month_name)[1:]
 
-    rango_fechas = st.date_input(
-        "Selecciona un rango de fechas",
-        value=(fecha_min, fecha_max),
-        min_value=fecha_min,
-        max_value=fecha_max
-    )
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
 
-    # Asegurar siempre tupla de fechas
-    if isinstance(rango_fechas, tuple):
-        fecha_inicio, fecha_fin = rango_fechas
-    else:
-        fecha_inicio = rango_fechas
-        fecha_fin = rango_fechas
+    año_inicio = col1.selectbox("Año inicio", años_disponibles, index=0)
+    mes_inicio = col2.selectbox("Mes inicio", meses_disponibles, index=0)
+
+    año_fin = col3.selectbox("Año fin", años_disponibles, index=len(años_disponibles)-1)
+    mes_fin = col4.selectbox("Mes fin", meses_disponibles, index=len(meses_disponibles)-1)
+
+    # Calcular inicio y fin exactos del mes
+    fecha_inicio = date(año_inicio, meses_disponibles.index(mes_inicio)+1, 1)
+    ultimo_dia = calendar.monthrange(año_fin, meses_disponibles.index(mes_fin)+1)[1]
+    fecha_fin = date(año_fin, meses_disponibles.index(mes_fin)+1, ultimo_dia)
 
     rango_fechas = (fecha_inicio, fecha_fin)
-
 else:
     st.warning("No hay fechas disponibles para este filtro.")
     st.stop()
