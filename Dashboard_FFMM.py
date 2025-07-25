@@ -104,7 +104,7 @@ with st.expander("🔧 Filtros adicionales"):
     serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
 # -------------------------------
-# Filtro de fechas
+# Filtro de fechas con calendario
 # -------------------------------
 st.markdown("### Rango de Fechas")
 fechas_disponibles = df["FECHA_INF_DATE"].dropna()
@@ -112,12 +112,14 @@ fechas_disponibles = df["FECHA_INF_DATE"].dropna()
 if not fechas_disponibles.empty:
     fecha_min = fechas_disponibles.min().date()
     fecha_max = fechas_disponibles.max().date()
-    rango_fechas = st.slider(
+    rango_fechas = st.date_input(
         "Selecciona un rango de fechas",
+        value=(fecha_min, fecha_max),
         min_value=fecha_min,
-        max_value=fecha_max,
-        value=(fecha_min, fecha_max)
+        max_value=fecha_max
     )
+    if not isinstance(rango_fechas, tuple):
+        rango_fechas = (fecha_min, fecha_max)
 else:
     st.warning("No hay fechas disponibles para este filtro.")
     st.stop()
@@ -146,24 +148,25 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.subheader("Evolución del Patrimonio Neto Total (en millones de CLP)")
     patrimonio_total = (
-        df_filtrado.groupby("FECHA_INF_DATE")["PATRIMONIO_NETO_MM"]
+        df_filtrado.groupby(df_filtrado["FECHA_INF_DATE"].dt.date)["PATRIMONIO_NETO_MM"]
         .sum()
         .sort_index()
     )
+    patrimonio_total.index = pd.to_datetime(patrimonio_total.index).strftime("%d-%m-%Y")
     st.bar_chart(patrimonio_total, height=300, use_container_width=True)
 
 with tab2:
     st.subheader("Evolución acumulada de la Venta Neta (en millones de CLP)")
     venta_neta_acumulada = (
-        df_filtrado.groupby("FECHA_INF_DATE")["VENTA_NETA_MM"]
+        df_filtrado.groupby(df_filtrado["FECHA_INF_DATE"].dt.date)["VENTA_NETA_MM"]
         .sum()
         .cumsum()
         .sort_index()
     )
+    venta_neta_acumulada.index = pd.to_datetime(venta_neta_acumulada.index).strftime("%d-%m-%Y")
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 with tab3:
-    # Agrupamos y ordenamos por venta neta acumulada
     ranking_ventas = (
         df_filtrado
         .groupby(["RUN_FM", "Nombre_Corto", "NOM_ADM"], as_index=False)["VENTA_NETA_MM"]
