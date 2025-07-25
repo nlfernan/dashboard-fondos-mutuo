@@ -26,6 +26,13 @@ def cargar_datos_parquet(path):
     ]
     return pd.read_parquet(path, columns=columnas_necesarias, engine="pyarrow")
 
+# Cachear rango de años/meses disponibles
+@st.cache_data
+def obtener_rango_fechas(df):
+    años = sorted(df["FECHA_INF_DATE"].dt.year.unique())
+    meses = list(calendar.month_name)[1:]
+    return años, meses
+
 try:
     df = cargar_datos_parquet(file_path)
 except Exception as e:
@@ -50,6 +57,42 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -------------------------------
+# Filtro de fechas primero
+# -------------------------------
+st.markdown("### Rango de Fechas")
+fechas_disponibles = df["FECHA_INF_DATE"].dropna()
+
+if not fechas_disponibles.empty:
+    años_disponibles, meses_disponibles = obtener_rango_fechas(df)
+
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
+
+    año_inicio = col1.selectbox("Año inicio", años_disponibles, index=0)
+    mes_inicio = col2.selectbox("Mes inicio", meses_disponibles, index=0)
+
+    año_fin = col3.selectbox("Año fin", años_disponibles, index=len(años_disponibles)-1)
+    mes_fin = col4.selectbox("Mes fin", meses_disponibles, index=len(meses_disponibles)-1)
+
+    # Fechas exactas de inicio y fin
+    fecha_inicio = date(año_inicio, meses_disponibles.index(mes_inicio)+1, 1)
+    ultimo_dia = calendar.monthrange(año_fin, meses_disponibles.index(mes_fin)+1)[1]
+    fecha_fin = date(año_fin, meses_disponibles.index(mes_fin)+1, ultimo_dia)
+
+    rango_fechas = (fecha_inicio, fecha_fin)
+else:
+    st.warning("No hay fechas disponibles para este filtro.")
+    st.stop()
+
+# Filtrar el DF primero solo por fechas
+df = df[(df["FECHA_INF_DATE"].dt.date >= rango_fechas[0]) &
+        (df["FECHA_INF_DATE"].dt.date <= rango_fechas[1])]
+
+if df.empty:
+    st.warning("No hay datos disponibles en el rango seleccionado.")
+    st.stop()
+
+# -------------------------------
 # Multiselect con "Seleccionar todo"
 # -------------------------------
 def multiselect_con_todo(label, opciones):
@@ -59,22 +102,6 @@ def multiselect_con_todo(label, opciones):
         return list(opciones)
     else:
         return seleccion
-
-# -------------------------------
-# Filtros dinámicos con cache
-# -------------------------------
-@st.cache_data
-def aplicar_filtros(df, tipo, categoria, adm, fondo, serie, fechas):
-    df_filtrado = df[df["TIPO_FM"].isin(tipo)]
-    df_filtrado = df_filtrado[df_filtrado["Categoría"].isin(categoria)]
-    df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm)]
-    df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(fondo)]
-    df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie)]
-    df_filtrado = df_filtrado[
-        (df_filtrado["FECHA_INF_DATE"].dt.date >= fechas[0]) &
-        (df_filtrado["FECHA_INF_DATE"].dt.date <= fechas[1])
-    ]
-    return df_filtrado
 
 # -------------------------------
 # Filtros adaptativos
@@ -87,7 +114,7 @@ def filtro_dinamico(label, opciones):
         return multiselect_con_todo(label, opciones)
 
 # -------------------------------
-# Aplicar filtros
+# Aplicar filtros restantes
 # -------------------------------
 categoria_opciones = sorted(df["Categoría"].dropna().unique())
 categoria_seleccionadas = filtro_dinamico("Categoría", categoria_opciones)
@@ -106,42 +133,13 @@ with st.expander("🔧 Filtros adicionales"):
     serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
 # -------------------------------
-# Filtro de fechas con Mes/Año
-# -------------------------------
-st.markdown("### Rango de Fechas")
-
-fechas_disponibles = df["FECHA_INF_DATE"].dropna()
-
-if not fechas_disponibles.empty:
-    años_disponibles = sorted(fechas_disponibles.dt.year.unique())
-    meses_disponibles = list(calendar.month_name)[1:]
-
-    col1, col2 = st.columns(2)
-    col3, col4 = st.columns(2)
-
-    año_inicio = col1.selectbox("Año inicio", años_disponibles, index=0)
-    mes_inicio = col2.selectbox("Mes inicio", meses_disponibles, index=0)
-
-    año_fin = col3.selectbox("Año fin", años_disponibles, index=len(años_disponibles)-1)
-    mes_fin = col4.selectbox("Mes fin", meses_disponibles, index=len(meses_disponibles)-1)
-
-    # Calcular inicio y fin exactos del mes
-    fecha_inicio = date(año_inicio, meses_disponibles.index(mes_inicio)+1, 1)
-    ultimo_dia = calendar.monthrange(año_fin, meses_disponibles.index(mes_fin)+1)[1]
-    fecha_fin = date(año_fin, meses_disponibles.index(mes_fin)+1, ultimo_dia)
-
-    rango_fechas = (fecha_inicio, fecha_fin)
-else:
-    st.warning("No hay fechas disponibles para este filtro.")
-    st.stop()
-
-# -------------------------------
 # Aplicar todos los filtros juntos
 # -------------------------------
-df_filtrado = aplicar_filtros(
-    df, tipo_seleccionados, categoria_seleccionadas,
-    adm_seleccionadas, fondo_seleccionados, serie_seleccionadas, rango_fechas
-)
+df_filtrado = df[df["TIPO_FM"].isin(tipo_seleccionados)]
+df_filtrado = df_filtrado[df_filtrado["Categoría"].isin(categoria_seleccionadas)]
+df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm_seleccionadas)]
+df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
+df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie_seleccionadas)]
 
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
