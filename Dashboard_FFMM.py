@@ -68,7 +68,7 @@ if not fechas_disponibles.empty:
     fecha_max_real = fechas_disponibles.max().date()
 
     año_inicio_default = fecha_min_real.year
-    mes_inicio_default = fecha_min_real.month - 1  # índice base 0
+    mes_inicio_default = fecha_min_real.month - 1
 
     año_fin_default = fecha_max_real.year
     mes_fin_default = fecha_max_real.month - 1
@@ -86,7 +86,7 @@ if not fechas_disponibles.empty:
     mes_fin = col4.selectbox("Mes fin", meses_disponibles,
                              index=mes_fin_default)
 
-    # Calcular fechas y limitar al máximo real
+    # Calcular fechas exactas y limitar al máximo real
     fecha_inicio = date(año_inicio, meses_disponibles.index(mes_inicio)+1, 1)
     ultimo_dia_mes = calendar.monthrange(año_fin, meses_disponibles.index(mes_fin)+1)[1]
     fecha_fin_teorica = date(año_fin, meses_disponibles.index(mes_fin)+1, ultimo_dia_mes)
@@ -174,7 +174,8 @@ with tab1:
         .sum()
         .sort_index()
     )
-    patrimonio_total.index = pd.to_datetime(patrimonio_total.index).strftime("%d-%m-%Y")
+    # Mantener datetime para orden cronológico correcto
+    patrimonio_total.index = pd.to_datetime(patrimonio_total.index)
     st.bar_chart(patrimonio_total, height=300, use_container_width=True)
 
 with tab2:
@@ -185,7 +186,7 @@ with tab2:
         .cumsum()
         .sort_index()
     )
-    venta_neta_acumulada.index = pd.to_datetime(venta_neta_acumulada.index).strftime("%d-%m-%Y")
+    venta_neta_acumulada.index = pd.to_datetime(venta_neta_acumulada.index)
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 with tab3:
