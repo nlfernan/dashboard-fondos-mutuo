@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 import os
 import calendar
-from datetime import date
+from datetime import date, timedelta
 
 # -------------------------------
 # Ruta y validación del archivo
@@ -106,6 +106,12 @@ if df.empty:
     st.stop()
 
 # -------------------------------
+# Inicializar session_state para slider/botones
+# -------------------------------
+if "rango_fechas" not in st.session_state:
+    st.session_state["rango_fechas"] = (rango_fechas[0], rango_fechas[1])
+
+# -------------------------------
 # Multiselect con "Seleccionar todo"
 # -------------------------------
 def multiselect_con_todo(label, opciones):
@@ -127,7 +133,7 @@ def filtro_dinamico(label, opciones):
         return multiselect_con_todo(label, opciones)
 
 # -------------------------------
-# Aplicar filtros
+# Filtros principales
 # -------------------------------
 categoria_opciones = sorted(df["Categoría"].dropna().unique())
 categoria_seleccionadas = filtro_dinamico("Categoría", categoria_opciones)
@@ -145,14 +151,51 @@ with st.expander("🔧 Filtros adicionales"):
     serie_opciones = sorted(df[df["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]["SERIE"].dropna().unique())
     serie_seleccionadas = filtro_dinamico("Serie(s)", serie_opciones)
 
+    # -------------------------------
+    # Ajuste fino de fechas con slider + botones rápidos
+    # -------------------------------
+    st.markdown("#### Ajuste fino de fechas")
+
+    fechas_unicas = sorted(df["FECHA_INF_DATE"].dt.date.unique())
+    fecha_min_real = fechas_unicas[0]
+    fecha_max_real = fechas_unicas[-1]
+    hoy = fecha_max_real
+
+    # Slider dinámico conectado a session_state
+    st.session_state["rango_fechas"] = st.slider(
+        "Rango exacto",
+        min_value=fecha_min_real,
+        max_value=fecha_max_real,
+        value=st.session_state["rango_fechas"],
+        format="DD-MM-YYYY"
+    )
+
+    # Botones rápidos que actualizan slider
+    col_a, col_b, col_c, col_d, col_e = st.columns(5)
+
+    if col_a.button("1M"):
+        st.session_state["rango_fechas"] = (max(hoy - timedelta(days=30), fecha_min_real), hoy)
+    if col_b.button("3M"):
+        st.session_state["rango_fechas"] = (max(hoy - timedelta(days=90), fecha_min_real), hoy)
+    if col_c.button("6M"):
+        st.session_state["rango_fechas"] = (max(hoy - timedelta(days=180), fecha_min_real), hoy)
+    if col_d.button("MTD"):
+        st.session_state["rango_fechas"] = (date(hoy.year, hoy.month, 1), hoy)
+    if col_e.button("YTD"):
+        st.session_state["rango_fechas"] = (date(hoy.year, 1, 1), hoy)
+
 # -------------------------------
 # Aplicar filtros juntos
 # -------------------------------
+rango_fechas = st.session_state["rango_fechas"]
+
 df_filtrado = df[df["TIPO_FM"].isin(tipo_seleccionados)]
 df_filtrado = df_filtrado[df_filtrado["Categoría"].isin(categoria_seleccionadas)]
 df_filtrado = df_filtrado[df_filtrado["NOM_ADM"].isin(adm_seleccionadas)]
 df_filtrado = df_filtrado[df_filtrado["RUN_FM_NOMBRECORTO"].isin(fondo_seleccionados)]
 df_filtrado = df_filtrado[df_filtrado["SERIE"].isin(serie_seleccionadas)]
+df_filtrado = df_filtrado[(df_filtrado["FECHA_INF_DATE"].dt.date >= rango_fechas[0]) &
+                          (df_filtrado["FECHA_INF_DATE"].dt.date <= rango_fechas[1])]
 
 if df_filtrado.empty:
     st.warning("No hay datos disponibles con los filtros seleccionados.")
@@ -174,7 +217,6 @@ with tab1:
         .sum()
         .sort_index()
     )
-    # Mantener datetime para orden cronológico correcto
     patrimonio_total.index = pd.to_datetime(patrimonio_total.index)
     st.bar_chart(patrimonio_total, height=300, use_container_width=True)
 
