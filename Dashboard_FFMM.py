@@ -163,7 +163,7 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 with tab3:
-    # Agrupamos y ordenamos por venta neta acumulada
+    # Agrupar y ordenar por venta neta acumulada
     ranking_ventas = (
         df_filtrado
         .groupby(["RUN_FM", "Nombre_Corto", "NOM_ADM"], as_index=False)["VENTA_NETA_MM"]
@@ -180,12 +180,19 @@ with tab3:
         return f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
 
     ranking_ventas["URL CMF"] = ranking_ventas["RUN_FM"].astype(str).apply(generar_url_cmf)
+
     ranking_ventas = ranking_ventas.rename(columns={
         "RUN_FM": "RUT",
         "Nombre_Corto": "Nombre del Fondo",
         "NOM_ADM": "Administradora",
         "VENTA_NETA_MM": "Venta Neta Acumulada (MM CLP)"
     })
+
+    # Formatear número
+    ranking_ventas["Venta Neta Acumulada (MM CLP)"] = ranking_ventas["Venta Neta Acumulada (MM CLP)"].apply(
+        lambda x: f"{x:,.0f}".replace(",", ".")
+    )
+
     ranking_ventas["URL CMF"] = ranking_ventas["URL CMF"].apply(lambda x: f'<a href="{x}" target="_blank">Ver en CMF</a>')
 
     st.markdown(ranking_ventas.to_html(index=False, escape=False), unsafe_allow_html=True)
