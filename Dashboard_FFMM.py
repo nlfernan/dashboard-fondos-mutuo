@@ -163,29 +163,32 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 with tab3:
-    total_fondos = df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]].drop_duplicates().shape[0]
-    st.subheader(f"Listado de Fondos Mutuos (máx. 20 de {total_fondos})")
-
-    def generar_url_cmf(rut):
-        return f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
-
-    tabla_fondos = (
-        df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]]
-        .drop_duplicates()
+    # Agrupamos y ordenamos por venta neta acumulada
+    ranking_ventas = (
+        df_filtrado
+        .groupby(["RUN_FM", "Nombre_Corto", "NOM_ADM"], as_index=False)["VENTA_NETA_MM"]
+        .sum()
+        .sort_values(by="VENTA_NETA_MM", ascending=False)
         .head(20)
         .copy()
     )
 
-    tabla_fondos["URL CMF"] = tabla_fondos["RUN_FM"].astype(str).apply(generar_url_cmf)
-    tabla_fondos = tabla_fondos.rename(columns={
+    total_fondos = df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]].drop_duplicates().shape[0]
+    st.subheader(f"Listado de Fondos Mutuos (top 20 por Venta Neta de {total_fondos})")
+
+    def generar_url_cmf(rut):
+        return f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
+
+    ranking_ventas["URL CMF"] = ranking_ventas["RUN_FM"].astype(str).apply(generar_url_cmf)
+    ranking_ventas = ranking_ventas.rename(columns={
         "RUN_FM": "RUT",
         "Nombre_Corto": "Nombre del Fondo",
-        "NOM_ADM": "Administradora"
+        "NOM_ADM": "Administradora",
+        "VENTA_NETA_MM": "Venta Neta Acumulada (MM CLP)"
     })
+    ranking_ventas["URL CMF"] = ranking_ventas["URL CMF"].apply(lambda x: f'<a href="{x}" target="_blank">Ver en CMF</a>')
 
-    tabla_fondos["URL CMF"] = tabla_fondos["URL CMF"].apply(lambda x: f'<a href="{x}" target="_blank">Ver en CMF</a>')
-
-    st.markdown(tabla_fondos.to_html(index=False, escape=False), unsafe_allow_html=True)
+    st.markdown(ranking_ventas.to_html(index=False, escape=False), unsafe_allow_html=True)
 
 # -------------------------------
 # Descargar CSV (limitado a 100.000 filas)
