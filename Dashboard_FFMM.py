@@ -163,7 +163,7 @@ with tab2:
     st.bar_chart(venta_neta_acumulada, height=300, use_container_width=True)
 
 with tab3:
-    # Agrupar y ordenar por venta neta acumulada
+    # Agrupamos y ordenamos por venta neta acumulada
     ranking_ventas = (
         df_filtrado
         .groupby(["RUN_FM", "Nombre_Corto", "NOM_ADM"], as_index=False)["VENTA_NETA_MM"]
@@ -174,7 +174,14 @@ with tab3:
     )
 
     total_fondos = df_filtrado[["RUN_FM", "Nombre_Corto", "NOM_ADM"]].drop_duplicates().shape[0]
-    st.subheader(f"Listado de Fondos Mutuos (top 20 por Venta Neta de {total_fondos})")
+    cantidad_ranking = ranking_ventas.shape[0]
+
+    if total_fondos <= 20:
+        titulo = f"Listado de Fondos Mutuos (total: {total_fondos})"
+    else:
+        titulo = f"Listado de Fondos Mutuos (top {cantidad_ranking} por Venta Neta de {total_fondos})"
+
+    st.subheader(titulo)
 
     def generar_url_cmf(rut):
         return f"https://www.cmfchile.cl/institucional/mercados/entidad.php?auth=&send=&mercado=V&rut={rut}&tipoentidad=RGFMU&vig=VI&row=AAAw+cAAhAABP4UAAB&control=svs&pestania=1"
@@ -188,7 +195,6 @@ with tab3:
         "VENTA_NETA_MM": "Venta Neta Acumulada (MM CLP)"
     })
 
-    # Formatear número
     ranking_ventas["Venta Neta Acumulada (MM CLP)"] = ranking_ventas["Venta Neta Acumulada (MM CLP)"].apply(
         lambda x: f"{x:,.0f}".replace(",", ".")
     )
